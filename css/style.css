@@ -1,0 +1,11 @@
+
+#plant-stat {
+  position: absolute;
+  width: 1920px;
+  height: 1080px;
+  border:1px solid #000000;
+}
+
+.plant-obj{
+  position: absolute;
+}
