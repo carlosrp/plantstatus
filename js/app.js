@@ -1,118 +1,90 @@
 /**
  * app.js
  */
+'use strict';
 
-/**
- * Application model
- */
-var model = {
-  objStatus: ['Normal', 'In Operation', 'LTP'],
-  /**
-   * Model initiaisation
-   */
-  init: function() {
+// Initialize Firebase
+// var config = {
+//   apiKey: "AIzaSyBmWsoB6qtm1nLerSf0yY_Jx_3SwphyLTE",
+//   authDomain: "plantstat.firebaseapp.com",
+//   databaseURL: "https://plantstat.firebaseio.com",
+//   storageBucket: "plantstat.appspot.com",
+//   messagingSenderId: "363782380167"
+// };
+// firebase.initializeApp(config);
 
-  },
-  /**
-   * Move object (id) to next status
-   */
-  rotateObjStatus: function(id) {
-    if( id < model.objList.length ) {
-
-    }
+var typeAttrs = {
+  'SWLP-up': { 
+  	'nStatus': '3',
+  	'imgList': ['images/SWLP-up-grey.svg', 'images/SWLP-up-operation.svg', 'images/SWLP-up-LTP.svg']
   }
 };
 
-/**
- * Application octopus (controller)
- */
-var octopus = {
-  /**
-   * Octopus initialisation
-   */
-  init: function() {
-    model.init();
-    viewModel.init();
-    // /**
-    //  * Add dynamic elements
-    //  */
-    // console.log('List:', model.objList);
-    // for( var obj of model.objList) {
-    //   console.log('Object:', obj);
-    //   viewModel.drawImage( obg.tag, obj.img[obj.status], obj.coords.x, obj.coords.y);
-    // }
-  }
+// Dynamic Element class object
+var DynElement = function(tag, name, type, x, y) {
+  this.tag = tag;
+  this.name = name;
+  this.type = type;
+  this.x = x;
+  this.y = y;
+  this.status = 0; // ToDo: initial status to be read from data store
+  // TODO: manage errors ---
+  this.nStatus = typeAttrs[type].nStatus; // ToDo: will the number of status depends on the type
+  this.imgList = typeAttrs[type].imgList;
+  // TODO ------------------
+  this.imgEl = null;
+}
+DynElement.prototype.cycleStatus = function() {
+  this.status = ++this.status % this.nStatus;
+  this.imgEl.setAttribute('src', this.getCurrentImg());
+};
+DynElement.prototype.getCurrentImg = function(){
+  return this.imgList[this.status];
 };
 
+// TODO: elements read from Firebase
+var listDynElements = [
+  {'tag': '000__PO001C', 'name': 'SWLP C', 'type': 'SWLP-up', 'x': '180px', 'y': '50px'},
+  {'tag': '000__PO001D', 'name': 'SWLP D', 'type': 'SWLP-up', 'x': '270px', 'y': '50px'}
+];
+
+// TODO: ----------------------------
+
+// Collection of JS Objects corresponding to dynamic objects 
+var dynElementsCollection = []; // Collection of DynElement
+
 /**
- * Application ViewModel
+ *
  */
-var viewModel = {
-  staticPlantImg: ko.observable(),
-  /**
-   * Plant dynamic objects
-   */
-  objList: ko.observableArray(),
-  /**
-   * viewModel initialisation function; called from Octopus initialisation.
-   */
-  init: function() {
-    /**
-     * Load Plant Static image
-     */
-    viewModel.staticPlantImg('images/plant-background.svg');
-    //viewModel.drawImage( 'static-plant',viewModel.staticPlantImg, 0, 0);
-    // Sample dynamic objects
-    // ToDO: should be loaded from model, I guess
-    viewModel.addPlantObj({
-      'tag': '000__PO001C',
-      'type': 'SWLP-up',
-      'x': '180px',
-      'y': '50px',
-      'status': 0, // ToDO: Should be initialised last saved status
-      'img': 'images/SWLP-up-grey.svg',
-      'imgList': ['images/SWLP-up-grey.svg',
-                  'images/SWLP-up-operation.svg',
-                  'images/SWLP-up-LTP.svg']
-    });
-    viewModel.addPlantObj({
-      'tag': '000__PO001D',
-      'type': 'SWLP-up',
-      'x': '270px',
-      'y': '50px',
-      'status': 0, // ToDO: Should be initialised last saved status
-      'img': 'images/SWLP-up-grey.svg',
-      'imgList': ['images/SWLP-up-grey.svg',
-                  'images/SWLP-up-operation.svg',
-                  'images/SWLP-up-LTP.svg']
-    });
-  },
-  addPlantObj: function(obj) {
-    // First add object to observable array
-    viewModel.objList.push(obj);
-    // Set object position
-    var img = document.getElementById(obj.tag);
-    img.style.left = obj.x;
-    img.style.top = obj.y;
-  },
-  objClicked: function(obj) {
-    console.log('Some object clicked', obj);
-    var img = document.getElementById( obj.tag );
-    obj.status = ++obj.status % 3;
-    img.src = obj.imgList[obj.status];
-  }
-  // drawImage: function(htmlId, imgName, x, y) {
-  //   console.log('Drawing', imgName, 'in ', x, y);
-  //   var canvas = document.getElementById('plant-stat-canvas');
-  //   var ctx = canvas.getContext('2d');
-  //   var img = new Image();
-  //   im.id = htmlId;
-  //   img.addEventListener('load', function() {
-  //     ctx.drawImage(img, x, y);
-  //   }, false);
-  //   img.src = imgName;
-  // }
+function rotateDynElement(id) {
+  console.log('Element', dynElementsCollection[id].tag, 'clicked');
+  dynElementsCollection[id].cycleStatus();
 };
 
-ko.applyBindings(viewModel);
-octopus.init();
+// Bindings on load.
+window.addEventListener('load', function() {
+
+  // First, add background img
+  var mainDiv = document.getElementById('plant-stat');
+  var bckImg = document.createElement('img');
+  bckImg.setAttribute('src', 'images/plant-background.svg');
+  mainDiv.appendChild(bckImg);
+
+  // Add dynamic elements
+  listDynElements.forEach(function(el, idx) {
+  	console.log('Adding element:', el.tag);
+  	// -> Create JS object for dyn element
+  	var dynEl = new DynElement(el.tag, el.name, el.type, el.x, el.y);
+    dynEl.imgEl = document.createElement('img');
+  	dynElementsCollection.push( dynEl );
+    console.log('Setting initial image src as: ', dynEl.getCurrentImg());
+    // -> Add img to DOM
+    dynEl.imgEl.setAttribute('class', 'plant-obj');
+    dynEl.imgEl.setAttribute('src', dynEl.getCurrentImg());
+    dynEl.imgEl.style.left = dynEl.x;
+    dynEl.imgEl.style.top = dynEl.y;
+    dynEl.imgEl.setAttribute('onclick', 'rotateDynElement(' + idx + ')');
+    mainDiv.appendChild(dynEl.imgEl);
+  });
+
+}, false);
